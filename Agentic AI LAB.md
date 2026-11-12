@@ -1,54 +1,45 @@
-# Agentic AI Lab – Exercises 1 to 6
-
-**Python:** 3.10–3.12  
-**LLM Provider:** Groq  
-**Model:** `openai/gpt-oss-20b`  
-**Run mode:** Terminal / VS Code
-
-## 1. Common Setup
-
-### Folder structure
-
+Agentic AI Lab – Exercises 1 to 6
+Python: 3.10–3.12  
+LLM: Groq (`openai/gpt-oss-20b`)
+1. Common Setup
+Project structure
 ```text
 AGENTIC_AI/
 ├── .env
 ├── requirements.txt
-├── exercise1_router.py
-├── exercise2_student_helper.py
-├── exercise3_retrieval/
+├── exercise1/
+│   └── main.py
+├── exercise2/
+│   └── main.py
+├── exercise3/
 │   ├── main.py
 │   └── data/
 │       └── syllabus.txt
-├── exercise4_self_correction.py
-├── exercise5_campus_rag/
+├── exercise4/
+│   └── main.py
+├── exercise5/
 │   ├── main.py
 │   └── data/
 │       ├── handbook.txt
 │       ├── exam_rules.txt
 │       └── department.txt
-└── exercise6_multi_agent.py
+└── exercise6/
+    └── main.py
 ```
-
-### Create and activate environment
-
-**Windows PowerShell**
-
+Create and activate environment
+Windows PowerShell
 ```powershell
 mkdir AGENTIC_AI
 cd AGENTIC_AI
 py -3.12 -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
-
 If PowerShell blocks activation:
-
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .venv\Scripts\Activate.ps1
 ```
-
-### `requirements.txt`
-
+`requirements.txt`
 ```text
 groq
 python-dotenv
@@ -63,32 +54,27 @@ chromadb
 pypdf
 langgraph
 ```
-
 Install packages:
-
 ```powershell
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
-### `.env`
-
-Create a Groq API key at [https://console.groq.com/keys](https://console.groq.com/keys), then save it in `.env`:
-
+`.env`
+Create a Groq API key at https://console.groq.com/keys, then save it in `.env`:
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 ```
-
 Do not share or upload the `.env` file. Never put the API key directly in Python code.
-
 ---
-
-## Exercise 1 – Campus Query Router Agent
-
-**Aim:** Classify a campus query as `academic`, `exam`, or `general`, then call the matching function.
-
-### `exercise1_router.py`
-
+Exercise 1 – Campus Query Router Agent
+File structure
+```text
+exercise1/
+├── .env
+├── requirements.txt
+└── main.py
+```
+`main.py`
 ```python
 import os
 from dotenv import load_dotenv
@@ -146,24 +132,26 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise1_router.py
+python exercise1/main.py
 ```
-
-**Sample input:** `When is the semester examination?`  
-**Expected route:** `exam`
-
+Sample output
+```text
+Enter campus query (exit to stop): When is the semester examination?
+Selected intent: exam
+Tool response: Exam information selected for: When is the semester examination?
+```
 ---
-
-## Exercise 2 – Student Helper Agent
-
-**Aim:** Use an LLM to select the `math`, `python_help`, or `english_grammar` tool. Ask for confirmation before executing the selected tool.
-
-### `exercise2_student_helper.py`
-
+Exercise 2 – Student Helper Agent
+File structure
+```text
+exercise2/
+├── .env
+├── requirements.txt
+└── main.py
+```
+`main.py`
 ```python
 import os
 import ast
@@ -274,34 +262,37 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise2_student_helper.py
+python exercise2/main.py
 ```
-
-**Sample inputs:** `Calculate 25 * 8`, `Explain Python for loop`, `Correct: He go to college daily.`
-
+Sample output
+```text
+Ask Student Helper (exit to stop): 25 * 8
+Selected tool: math
+Execute this tool? (y/n): y
+Tool response: Result: 200
+```
 ---
-
-## Exercise 3 – LangChain Simple Retrieval Agent
-
-**Aim:** Load a syllabus text file, split it into chunks, create embeddings, store them in ChromaDB, retrieve relevant chunks, and generate a grounded answer.
-
-### `exercise3_retrieval/data/syllabus.txt`
-
+Exercise 3 – LangChain Simple Retrieval Agent
+File structure
+```text
+exercise3/
+├── .env
+├── requirements.txt
+├── main.py
+└── data/
+    └── syllabus.txt
+```
+`data/syllabus.txt`
 Create the file and add your syllabus content. Example:
-
 ```text
 The Computer Science Engineering programme includes programming, data structures, database management systems, operating systems, computer networks and artificial intelligence.
 Students must maintain the attendance percentage prescribed by the college.
 Internal assessment and semester-end examinations are part of the evaluation process.
 Students should complete laboratory records and assignments before the deadlines announced by faculty.
 ```
-
-### `exercise3_retrieval/main.py`
-
+`main.py`
 ```python
 import os
 from pathlib import Path
@@ -370,25 +361,32 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise3_retrieval/main.py
+python exercise3/main.py
 ```
+Sample output
+```text
+Syllabus Retrieval Agent. Type exit to stop.
+Ask a syllabus question: Which subjects are included in the CSE programme?
 
-**Sample input:** `Which subjects are included in the CSE programme?`
+Answer:
+ The CSE programme includes programming, data structures, database management systems, operating systems, computer networks and artificial intelligence.
 
-**Note:** The first run downloads the embedding model. Internet access is required for the initial download.
-
+Retrieved sources:
+- .../syllabus.txt
+The Computer Science Engineering programme includes programming, data structures, database management systems, operating systems, computer networks and artificial intelligence.
+```
 ---
-
-## Exercise 4 – LangGraph Self-Correction Agent
-
-**Aim:** Generate Python code, validate its syntax, and retry once with correction instructions if syntax validation fails.
-
-### `exercise4_self_correction.py`
-
+Exercise 4 – LangGraph Self-Correction Agent
+File structure
+```text
+exercise4/
+├── .env
+├── requirements.txt
+└── main.py
+```
+`main.py`
 ```python
 import os
 import ast
@@ -418,7 +416,8 @@ def generate_code(state: AgentState):
     return {"code": response.content.strip(), "attempts": 1}
 
 def validate_code(state: AgentState):
-    code = state["code"].replace("```python", "").replace("```", "").strip()
+    code = state["code"].replace("
+```python", "").replace("```", "").strip()
     try:
         ast.parse(code)
         return {"code": code, "error": ""}
@@ -472,52 +471,54 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise4_self_correction.py
+python exercise4/main.py
 ```
+Sample output
+```text
+Enter a Python coding task: Write a Python program to reverse a list.
 
-**Sample input:** `Write a Python program to reverse a list.`
+Final code:
 
-**Note:** This experiment checks Python syntax using `ast.parse`; it does not prove that the program is logically correct or that it runs successfully for every input.
+def reverse_list(items):
+    return items[::-1]
 
+Syntax validation: Passed
+Generation attempts: 1
+```
 ---
-
-## Exercise 5 – Multi-Document Campus RAG Agent
-
-**Aim:** Load multiple campus documents, create searchable chunks, retrieve relevant content, answer using retrieved context, and display source snippets.
-
-### Create documents
-
-Create these files inside `exercise5_campus_rag/data/`. Replace the sample content with actual college documents.
-
-**`handbook.txt`**
+Exercise 5 – Multi-Document Campus RAG Agent
+File structure
+```text
+exercise5/
+├── .env
+├── requirements.txt
+├── main.py
+└── data/
+    ├── handbook.txt
+    ├── exam_rules.txt
+    └── department.txt
+```
+`data/handbook.txt`
 
 ```text
 Students should follow the academic calendar published by the college.
 Students must maintain the attendance percentage required by college regulations.
 Assignments and laboratory records must be submitted within the deadlines announced by faculty.
 ```
-
-**`exam_rules.txt`**
-
+`data/exam_rules.txt`
 ```text
 Students must carry their hall ticket and valid college identity card to the examination hall.
 Electronic devices are not permitted inside the examination hall unless explicitly authorized.
 Students should follow the examination timetable announced by the examination branch.
 ```
-
-**`department.txt`**
-
+`data/department.txt`
 ```text
 The Computer Science and Engineering department offers courses in programming, data structures, databases, operating systems, computer networks and artificial intelligence.
 The department encourages students to participate in projects, internships, technical events and workshops.
 ```
-
-### `exercise5_campus_rag/main.py`
-
+`main.py`
 ```python
 import os
 from pathlib import Path
@@ -595,25 +596,33 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise5_campus_rag/main.py
+python exercise5/main.py
 ```
+Sample output
+```text
+Campus RAG Agent. Type exit to stop.
+Ask a campus question: What should students carry to the examination hall?
 
-**Sample input:** `What should students carry to the examination hall?`
+Answer:
+ Students must carry their hall ticket and valid college identity card.
 
-**Note:** Answers depend on the documents supplied. Verify official college rules against the latest handbook and examination notifications. The first run downloads the embedding model.
+Reference snippets:
 
+Source: exam_rules.txt
+Students must carry their hall ticket and valid college identity card to the examination hall.
+```
 ---
-
-## Exercise 6 – Two-Agent Collaboration
-
-**Aim:** A Research Agent generates key points. A Refiner Agent converts those points into a short, structured explanation.
-
-### `exercise6_multi_agent.py`
-
+Exercise 6 – Two-Agent Collaboration
+File structure
+```text
+exercise6/
+├── .env
+├── requirements.txt
+└── main.py
+```
+`main.py`
 ```python
 import os
 from dotenv import load_dotenv
@@ -656,44 +665,28 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### Run
-
+Run
 ```powershell
-python exercise6_multi_agent.py
+python exercise6/main.py
 ```
+Sample output
+```text
+Enter a topic: Applications of Artificial Intelligence in education
 
-**Sample input:** `Applications of Artificial Intelligence in education`
+Research Agent:
+- Personalized learning
+- Automated assessment
+- Intelligent tutoring systems
+- Learning analytics
+- Content generation
 
+Refiner Agent:
+
+Final explanation:
+
+Artificial Intelligence supports education through personalized learning,
+automated assessment, intelligent tutoring, learning analytics and content
+generation. These applications can help teachers understand student progress
+and provide learning support.
+```
 ---
-
-## 2. Execution Checklist
-
-- [ ] Exercise 1: Academic, exam and general routing works.
-- [ ] Exercise 2: Math, Python help and grammar tools work; confirmation is requested.
-- [ ] Exercise 3: Syllabus file loads, chunks are embedded, and relevant content is retrieved.
-- [ ] Exercise 4: Code is generated and syntax-checked; correction is attempted when needed.
-- [ ] Exercise 5: Multiple documents are searched and reference snippets are displayed.
-- [ ] Exercise 6: Research Agent output is passed to the Refiner Agent.
-
-## 3. Common Errors and Fixes
-
-| Error | Fix |
-|---|---|
-| `GROQ_API_KEY` is missing | Check the `.env` file is in the project root and contains the correct key. |
-| `ModuleNotFoundError` | Activate `.venv`, then run `pip install -r requirements.txt`. |
-| `model_decommissioned` or model unavailable | Check the currently supported model name in the Groq console and update the model string in the Python files. |
-| `429 Too Many Requests` | Wait and retry; check Groq rate limits and usage. |
-| Embedding model download fails | Check internet access and retry the first run. |
-| `FileNotFoundError` | Check the folder and file names against the structure shown above. |
-| Chroma database issues | Stop the program and remove that experiment's `chroma_db` folder to rebuild its index. |
-| PowerShell activation blocked | Run the process-scoped execution policy command in the setup section. |
-
-## 4. Important Notes
-
-1. Run commands from the `AGENTIC_AI` project root unless stated otherwise.
-2. Keep `.env`, `.venv`, and generated `chroma_db` folders out of GitHub.
-3. Do not commit API keys or private college documents.
-4. Retrieval quality depends on document quality, chunk size, and embedding quality.
-5. LLM output can be incorrect. Validate generated code and verify academic or examination information from official sources.
-6. These are educational implementations with basic routing and validation, not production-ready autonomous systems.
