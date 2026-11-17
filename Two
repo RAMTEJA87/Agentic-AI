@@ -1,0 +1,62 @@
+
+import os
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv()
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def ask_llm(prompt, query):
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": query}
+        ],
+        temperature=0
+    )
+    return response.choices[0].message.content
+
+def math_tool(query):
+    return ask_llm("Solve the math problem with steps.", query)
+
+def python_help(query):
+    return ask_llm("Explain the Python concept or syntax with an example.", query)
+
+def english_grammar(query):
+    return ask_llm("Correct the grammar and provide the corrected sentence.", query)
+
+tools = {
+    "math": math_tool,
+    "python_help": python_help,
+    "english_grammar": english_grammar
+}
+
+def run_agent(query):
+    intent = ask_llm(
+        "Classify the query as exactly one: math, python_help, english_grammar. Return only the label.",
+        query
+    ).strip().lower()
+
+    if intent not in tools:
+        print("Unable to identify query category.")
+        return
+
+    print("Selected Tool:", intent)
+    print("Response:", tools[intent](query))
+
+def main():
+    while True:
+        query = input("\nEnter query (exit to stop): ").strip()
+
+        if query.lower() == "exit":
+            break
+
+        if query:
+            try:
+                run_agent(query)
+            except Exception as e:
+                print("Error:", e)
+
+if __name__ == "__main__":
+    main()
