@@ -1,0 +1,62 @@
+
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+
+# Load API key
+load_dotenv()
+
+# Initialize LLM
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0,
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
+# Research Agent
+def research_agent(topic):
+
+    prompt = f"""
+    You are a Research Agent.
+    Generate 5 important bullet points about:
+    {topic}
+    """
+
+    response = llm.invoke(prompt)
+
+    return response.content
+
+
+# Refiner Agent
+def refiner_agent(points):
+
+    prompt = f"""
+    You are a Refiner Agent.
+    Convert these bullet points into
+    a short, well-structured explanation.
+
+    Points:
+    {points}
+    """
+
+    response = llm.invoke(prompt)
+
+    return response.content
+
+
+# Main pipeline
+topic = input("Enter a topic: ")
+
+print("\nResearch Agent Working...")
+
+points = research_agent(topic)
+
+print("\nResearch Points:")
+print(points)
+
+print("\nRefiner Agent Working...")
+
+answer = refiner_agent(points)
+
+print("\nFinal Explanation:")
+print(answer)
