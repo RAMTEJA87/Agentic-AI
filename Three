@@ -1,0 +1,99 @@
+import os
+from dotenv import load_dotenv
+
+from langchain_community.document_loaders import TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
+
+load_dotenv()
+api_key = os.getenv("GROQ_API_KEY")
+
+folder_path = "documents"
+documents = []
+
+for filename in os.listdir(folder_path):
+    if filename.endswith(".txt"):
+        loader = TextLoader(
+            os.path.join(folder_path, filename),
+            encoding="utf-8"
+        )
+        documents.extend(loader.load())
+
+print("Documents loaded:", len(documents))
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=300,
+    chunk_overlap=50
+)
+
+chunks = splitter.split_documents(documents)
+
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+db = Chroma.from_documents(
+    documents=chunks,
+    embedding=embeddings,
+    collection_name="campus",
+    persist_directory="./chroma_db"
+)
+
+retriever = db.as_retriever(
+    search_kwargs={"k": 3}
+)
+
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0,
+    api_key=api_key
+)
+
+prompt = PromptTemplate(
+    input_variables=["context", "question"],
+    template="""
+Answer using only the given context.
+
+If information is unavailable, say:
+Information not found in documents.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Answer:
+"""
+)
+
+chain = prompt | llm
+
+while True:
+    question = input("\nAsk Campus Question: ")
+
+    if question.lower().strip() == "exit":
+        break
+
+    results = retriever.invoke(question)
+
+    context = "\n".join(
+        doc.page_content for doc in results
+    )
+
+    response = chain.invoke({
+        "context": context,
+        "question": question
+    })
+
+    print("\nAnswer:")
+    print(response.content)
+
+    print("\nReference Snippets:")
+
+    for doc in results:
+        print("\nSource:", doc.metadata.get("source"))
+        print("Content:", doc.page_content)
