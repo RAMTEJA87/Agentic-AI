@@ -1,4 +1,6 @@
+
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
@@ -6,59 +8,71 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+
+load_dotenv(BASE_DIR.parent / ".env")
+
 api_key = os.getenv("GROQ_API_KEY")
 
-folder_path = "documents"
+if not api_key:
+    raise ValueError("GROQ_API_KEY not found")
+
+# 1. Load documents
+data_dir = BASE_DIR / "data"
+
 documents = []
 
-for filename in os.listdir(folder_path):
-    if filename.endswith(".txt"):
-        loader = TextLoader(
-            os.path.join(folder_path, filename),
-            encoding="utf-8"
-        )
-        documents.extend(loader.load())
+for file_name in ["handbook.txt", "exam_rules.txt", "department.txt"]:
+    file_path = data_dir / file_name
+
+    documents.extend(
+        TextLoader(str(file_path), encoding="utf-8").load()
+    )
 
 print("Documents loaded:", len(documents))
 
+# 2. Split documents into chunks
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=300,
-    chunk_overlap=50
+    chunk_size=500,
+    chunk_overlap=80
 )
 
 chunks = splitter.split_documents(documents)
 
+print("Total chunks:", len(chunks))
+
+# 3. Generate embeddings
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
+# 4. Store embeddings in ChromaDB
 db = Chroma.from_documents(
     documents=chunks,
     embedding=embeddings,
-    collection_name="campus",
-    persist_directory="./chroma_db"
+    collection_name="campus_information"
 )
 
+# 5. Create retriever
 retriever = db.as_retriever(
-    search_kwargs={"k": 3}
+    search_kwargs={"k": 1}
 )
 
+# 6. Initialize LLM
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
     temperature=0,
     api_key=api_key
 )
 
-prompt = PromptTemplate(
-    input_variables=["context", "question"],
-    template="""
-Answer using only the given context.
+# 7. Create prompt template
+prompt = ChatPromptTemplate.from_template("""
+Answer the question using only the given context.
 
-If information is unavailable, say:
-Information not found in documents.
+If the answer is not available, say:
+Information not found in the provided documents.
 
 Context:
 {context}
@@ -67,33 +81,46 @@ Question:
 {question}
 
 Answer:
-"""
-)
+""")
 
+# 8. Create LangChain pipeline
 chain = prompt | llm
 
-while True:
-    question = input("\nAsk Campus Question: ")
+# 9. Retrieval Agent
+def ask_question(question):
 
-    if question.lower().strip() == "exit":
-        break
+    docs = retriever.invoke(question)
 
-    results = retriever.invoke(question)
-
-    context = "\n".join(
-        doc.page_content for doc in results
+    context = "\n\n".join(
+        doc.page_content for doc in docs
     )
 
-    response = chain.invoke({
+    answer = chain.invoke({
         "context": context,
         "question": question
     })
 
-    print("\nAnswer:")
-    print(response.content)
+    print("\nAnswer:", answer.content)
 
-    print("\nReference Snippets:")
+    print("\nRetrieved Source:")
 
-    for doc in results:
-        print("\nSource:", doc.metadata.get("source"))
+    for doc in docs:
+        print("File:", Path(doc.metadata["source"]).name)
         print("Content:", doc.page_content)
+
+
+# 10. Main function
+def main():
+
+    while True:
+
+        question = input("\nAsk Question (exit to stop): ")
+
+        if question.lower().strip() == "exit":
+            break
+
+        ask_question(question)
+
+
+if __name__ == "__main__":
+    main()
