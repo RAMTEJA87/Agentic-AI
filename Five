@@ -1,0 +1,118 @@
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+from langchain_community.document_loaders import TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR.parent / ".env")
+
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    raise ValueError("GROQ_API_KEY is missing from .env file.")
+
+
+data_dir = BASE_DIR / "data"
+
+file_names = [
+    "handbook.txt",
+    "exam_rules.txt",
+    "department.txt"
+]
+
+documents = []
+
+for file_name in file_names:
+    file_path = data_dir / file_name
+
+    if not file_path.exists():
+        raise FileNotFoundError(f"Missing document: {file_path}")
+
+    documents.extend(
+        TextLoader(str(file_path), encoding="utf-8").load()
+    )
+
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=80
+)
+
+chunks = splitter.split_documents(documents)
+
+
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+
+db = Chroma.from_documents(
+    documents=chunks,
+    embedding=embeddings,
+    collection_name="campus_information",
+    persist_directory=str(BASE_DIR / "chroma_db")
+)
+
+
+retriever = db.as_retriever(
+    search_kwargs={"k": 4}
+)
+
+
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0,
+    api_key=api_key
+)
+
+
+prompt = ChatPromptTemplate.from_template(
+    "Answer only from the supplied campus document context. "
+    "Do not invent rules or details. If the answer is missing, say "
+    "'Information not found in the provided documents.'\n\n"
+    "Context:\n{context}\n\n"
+    "Question: {question}\n\n"
+    "Answer:"
+)
+
+chain = prompt | llm
+
+
+def main():
+    while True:
+        question = input("\nAsk Question: ")
+
+        if question.lower() == "exit":
+            break
+
+        docs = retriever.invoke(question)
+
+        context = "\n\n".join(
+            doc.page_content for doc in docs
+        )
+
+        answer = chain.invoke({
+            "context": context,
+            "question": question
+        })
+
+        print("\nAnswer:", answer.content)
+
+        print("\nReference Snippets:")
+
+        for doc in docs:
+            print("\nSource:", Path(doc.metadata["source"]).name)
+            print(doc.page_content)
+
+
+if __name__ == "__main__":
+    main()
+
